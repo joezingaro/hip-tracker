@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Left Hip · Rehab Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0d;
+    --surface: #1a1a16;
+    --surface2: #222220;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e4d9;
+    --muted: rgba(232,228,217,0.45);
+    --accent: #c8f060;
+    --accent-dim: rgba(200,240,96,0.12);
+    --warn: #f0a060;
+    --warn-dim: rgba(240,160,96,0.12);
+    --red: #f06060;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); overscroll-behavior: none; }
+
+  .app { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+  .header { padding: 52px 24px 20px; border-bottom: 1px solid var(--border); }
+  .header-label { font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .header-title { font-family: var(--serif); font-weight: 300; font-size: 26px; line-height: 1.2; color: var(--text); }
+  .header-title em { font-style: italic; color: var(--accent); }
+  .phase-bar { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+  .phase-pip { width: 28px; height: 3px; border-radius: 2px; background: var(--border); }
+  .phase-pip.active { background: var(--accent); }
+  .phase-pip.done { background: rgba(200,240,96,0.35); }
+  .phase-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-left: 2px; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 14px 0; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: none; border: none; cursor: pointer; transition: color 0.2s; font-family: var(--mono); }
+  .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -1px; }
+
+  .page { display: none; flex: 1; overflow-y: auto; padding: 20px 24px 100px; }
+  .page.active { display: block; }
+
+  .session-type { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stype-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; padding: 7px 13px; border-radius: 99px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .stype-btn.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .section-label { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; margin-top: 24px; }
+
+  .ex-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+  .ex-card-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .ex-card-left { display: flex; align-items: center; gap: 12px; }
+  .ex-check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; cursor: pointer; }
+  .ex-check.done { background: var(--accent); border-color: var(--accent); }
+  .ex-check.done::after { content: '✓'; font-size: 12px; color: #0f0f0d; font-weight: 600; }
+  .ex-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .ex-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .ex-chevron { font-size: 11px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+  .ex-card.open .ex-chevron { transform: rotate(180deg); }
+  .ex-card.open .ex-detail { display: block; }
+  .ex-detail { display: none; padding: 12px 16px 14px; border-top: 1px solid var(--border); }
+  .ex-cue { font-size: 12px; color: var(--muted); line-height: 1.65; }
+  .ex-cue strong { color: var(--warn); font-weight: 500; }
+
+  .symmetry-block { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 8px; }
+  .sym-question { font-size: 13px; color: var(--text); margin-bottom: 14px; line-height: 1.5; }
+  .sym-options { display: flex; gap: 8px; }
+  .sym-btn { flex: 1; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--border); background: none; font-family: var(--mono); font-size: 11px; color: var(--muted); cursor: pointer; text-align: center; line-height: 1.4; transition: all 0.15s; }
+  .sym-btn.sel-1 { background: var(--warn-dim); border-color: var(--warn); color: var(--warn); }
+  .sym-btn.sel-2 { background: rgba(200,240,96,0.08); border-color: rgba(200,240,96,0.4); color: rgba(200,240,96,0.8); }
+  .sym-btn.sel-3 { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .log-btn { width: 100%; margin-top: 24px; padding: 16px; border-radius: 14px; background: var(--accent); color: #0f0f0d; font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: 0.06em; border: none; cursor: pointer; transition: opacity 0.2s; }
+  .log-btn:active { opacity: 0.8; }
+  .log-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat-val { font-family: var(--serif); font-size: 32px; font-weight: 300; color: var(--accent); line-height: 1; }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-top: 4px; text-transform: uppercase; }
+
+  .log-entry { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+  .log-dot.med { background: var(--warn); }
+  .log-dot.low { background: var(--red); }
+  .log-date { font-size: 11px; color: var(--muted); }
+  .log-detail { font-size: 12px; color: var(--text); margin-top: 2px; }
+  .log-sym { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+  .chart-title { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+  .chart-svg { width: 100%; }
+
+  .phase-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 12px; }
+  .phase-card.current { border-color: var(--accent); }
+  .phase-num { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .phase-name { font-family: var(--serif); font-style: italic; font-size: 20px; font-weight: 300; color: var(--text); margin: 4px 0 2px; }
+  .phase-card.current .phase-name { color: var(--accent); }
+  .phase-duration { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .phase-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .phase-current-badge { display: inline-block; font-size: 10px; letter-spacing: 0.08em; background: var(--accent-dim); color: var(--accent); border-radius: 99px; padding: 3px 10px; margin-bottom: 10px; }
+
+  .empty { text-align: center; padding: 48px 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+  /* Sync status */
+  .sync-status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-top: 12px; padding: 10px 14px; background: var(--surface); border-radius: 10px; border: 1px solid var(--border); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s; }
+  .sync-dot.syncing { background: var(--warn); animation: pulse 1s infinite; }
+  .sync-dot.synced { background: var(--accent); }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--accent); color: #0f0f0d; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 10px 20px; border-radius: 99px; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; z-index: 100; }
+  .toast.error { background: var(--red); color: var(--text); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .loading-row { display: flex; align-items: center; gap: 10px; padding: 16px 0; color: var(--muted); font-size: 12px; }
+  .spinner { width: 14px; height: 14px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .refresh-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; cursor: pointer; float: right; margin-top: -4px; }
+  .refresh-btn:active { opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-label">Left Hip Correction · ACL Rehab</div>
+    <div class="header-title">Your <em>daily</em><br>movement tracker</div>
+    <div class="phase-bar">
+      <div class="phase-pip active"></div>
+      <div class="phase-pip"></div>
+      <div class="phase-pip"></div>
+      <span class="phase-label">Phase 1 · Activation</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showPage('today', this)">Today</button>
+    <button class="tab" onclick="showPage('progress', this)">Progress</button>
+    <button class="tab" onclick="showPage('guide', this)">Guide</button>
+  </div>
+
+  <!-- TODAY -->
+  <div class="page active" id="page-today">
+    <div class="section-label" style="margin-top:16px">What's your session today?</div>
+    <div class="session-type">
+      <button class="stype-btn" onclick="selectType(this,'Lift')">🏋️ Lift</button>
+      <button class="stype-btn" onclick="selectType(this,'Ride')">🚴 Ride</button>
+      <button class="stype-btn" onclick="selectType(this,'Run')">🏃 Run</button>
+      <button class="stype-btn" onclick="selectType(this,'Soccer')">⚽ Soccer</button>
+      <button class="stype-btn" onclick="selectType(this,'Swim')">🏊 Swim</button>
+      <button class="stype-btn" onclick="selectType(this,'Rest')">💤 Rest</button>
+    </div>
+
+    <div class="section-label">Pre-session activation <span style="color:var(--accent)">(always)</span></div>
+
+    <div class="ex-card" id="ex-0">
+      <div class="ex-card-header" onclick="toggleEx(0)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="chk-0" onclick="event.stopPropagation();toggleCheck(0)"></div>
+          <div>
+            <div class="ex-name">Banded side steps</div>
+            <div class="ex-meta">20 steps each direction · band above knees</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">Band just above knees. Walk sideways keeping toes forward and hips level. <strong>Feel it deep in the outer left hip — not the front of the thigh.</strong> If you feel it in the TFL (front/outer hip), slow down and widen your stance slightly.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="ex-1">
+      <div class="ex-card-header" onclick="toggleEx(1)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="chk-1" onclick="event.stopPropagation();toggleCheck(1)"></div>
+          <div>
+            <div class="ex-name">Single-leg stance hold</div>
+            <div class="ex-meta">Left leg only · 3 × 20 sec</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">Stand on left leg. <strong>Keep the right hip from dropping.</strong> If it drops, that's the weakness showing. Slight knee bend. Engage the outer left hip actively — don't just balance passively.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="ex-2">
+      <div class="ex-card-header" onclick="toggleEx(2)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="chk-2" onclick="event.stopPropagation();toggleCheck(2)"></div>
+          <div>
+            <div class="ex-name">Single-leg glute bridge</div>
+            <div class="ex-meta">Left leg only · 2 × 15 reps</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">Lie on back, left foot flat, right leg extended. Drive through left heel to lift hips. <strong>Squeeze left glute hard at the top for 1 second.</strong> Don't let the right hip sag. Lower slowly — 3 counts down.</div>
+      </div>
+    </div>
+
+    <!-- LIFT extras -->
+    <div id="lift-block" style="display:none">
+      <div class="section-label">Add to your lift</div>
+      <div class="ex-card" id="ex-3">
+        <div class="ex-card-header" onclick="toggleEx(3)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="chk-3" onclick="event.stopPropagation();toggleCheck(3)"></div>
+            <div>
+              <div class="ex-name">Single-leg RDL</div>
+              <div class="ex-meta">Left leg · 3 × 10 · go heavy enough to feel it</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Dumbbell in right hand. <strong>Hinge from the left hip — keep it level, don't rotate open.</strong> Feel the left hamstring and glute loading. Soft left knee throughout. This is your highest-value corrective given the graft history.</div>
+        </div>
+      </div>
+      <div class="ex-card" id="ex-4">
+        <div class="ex-card-header" onclick="toggleEx(4)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="chk-4" onclick="event.stopPropagation();toggleCheck(4)"></div>
+            <div>
+              <div class="ex-name">Step-down</div>
+              <div class="ex-meta">Left leg · 2 × 10 slow · your weekly quality check</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Stand on a step on the left leg. Slowly lower the right foot toward the floor — <strong>don't touch it</strong> — then return. Watch for: knee caving in, hip dropping right, trunk shifting. Note whether it feels better than last week.</div>
+        </div>
+      </div>
+      <div class="ex-card" id="ex-5">
+        <div class="ex-card-header" onclick="toggleEx(5)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="chk-5" onclick="event.stopPropagation();toggleCheck(5)"></div>
+            <div>
+              <div class="ex-name">Copenhagen adductor hold</div>
+              <div class="ex-meta">Left side · 3 × 20–30 sec</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Lie on your right side, left foot resting on a bench at hip height. <strong>Lift hips off the floor using the left inner thigh — hold straight.</strong> Adductors and glute med work as a force couple. Start shorter if it's hard.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUN block -->
+    <div id="run-block" style="display:none">
+      <div class="section-label">Running focus</div>
+      <div class="ex-card" style="border-color:var(--warn)">
+        <div class="ex-card-header">
+          <div class="ex-card-left">
+            <div style="width:22px;flex-shrink:0;font-size:16px">👁</div>
+            <div>
+              <div class="ex-name">Fatigue-state check</div>
+              <div class="ex-meta">Last 20% of your run</div>
+            </div>
+          </div>
+        </div>
+        <div class="ex-detail" style="display:block">
+          <div class="ex-cue">When tired — <strong>this is when the left hip drops.</strong> Check in: is the right hip dropping? Is the trunk drifting right? Noticing it starts correcting it. Do the banded steps immediately after your run — the fatigued state is when rewiring happens fastest.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIDE block -->
+    <div id="ride-block" style="display:none">
+      <div class="section-label">Cycling focus</div>
+      <div class="ex-card" style="border-color:var(--warn)">
+        <div class="ex-card-header">
+          <div class="ex-card-left">
+            <div style="width:22px;flex-shrink:0;font-size:16px">🎯</div>
+            <div>
+              <div class="ex-name">Pre-ride prime</div>
+              <div class="ex-meta">Do activation before you clip in</div>
+            </div>
+          </div>
+        </div>
+        <div class="ex-detail" style="display:block">
+          <div class="ex-cue"><strong>Do all 3 activation exercises before getting on the bike.</strong> The bilateral pedal stroke lets the right side dominate silently. Priming first means the left glute med shows up from stroke one. Saddle check: if the left hip rocks down at the bottom of the stroke, saddle may be too high.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOCCER block -->
+    <div id="soccer-block" style="display:none">
+      <div class="section-label">Soccer focus</div>
+      <div class="ex-card" style="border-color:var(--warn)">
+        <div class="ex-card-header">
+          <div class="ex-card-left">
+            <div style="width:22px;flex-shrink:0;font-size:16px">⚡</div>
+            <div>
+              <div class="ex-name">Late-game awareness</div>
+              <div class="ex-meta">2nd half · fatigue state</div>
+            </div>
+          </div>
+        </div>
+        <div class="ex-detail" style="display:block">
+          <div class="ex-cue"><strong>Left knee diving in on cuts, left hip feeling heavy or less explosive</strong> — this is the compensation pattern showing. Normal given the history. The goal over months is that this gap narrows. Note any asymmetry you feel today when you log.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Weekly symmetry check</div>
+    <div class="symmetry-block">
+      <div class="sym-question">How did the left leg step-down feel vs the right today?</div>
+      <div class="sym-options">
+        <button class="sym-btn" id="sym-1" onclick="selectSym(1)">Still very<br>asymmetric</button>
+        <button class="sym-btn" id="sym-2" onclick="selectSym(2)">Improving,<br>still off</button>
+        <button class="sym-btn" id="sym-3" onclick="selectSym(3)">Feeling<br>close</button>
+      </div>
+    </div>
+
+    <button class="log-btn" id="log-btn" onclick="logSession()">Log this session</button>
+
+    <div class="sync-status" id="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-text">Ready to sync to Google Sheets</span>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="page" id="page-progress">
+    <div class="stat-row" style="margin-top:16px">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-sessions">—</div>
+        <div class="stat-label">Sessions logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-streak">—</div>
+        <div class="stat-label">Week streak</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Symmetry trend · step-down test</div>
+      <svg class="chart-svg" height="80" id="sym-chart" viewBox="0 0 340 80">
+        <text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Loading...</text>
+      </svg>
+    </div>
+
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Session history</span>
+      <button class="refresh-btn" onclick="loadProgress()">↻ Refresh</button>
+    </div>
+    <div id="log-list">
+      <div class="loading-row"><div class="spinner"></div> Loading from Google Sheets…</div>
+    </div>
+  </div>
+
+  <!-- GUIDE -->
+  <div class="page" id="page-guide">
+    <div class="section-label" style="margin-top:16px">Your correction pathway</div>
+
+    <div class="phase-card current">
+      <div class="phase-current-badge">← You are here</div>
+      <div class="phase-num">Phase 1</div>
+      <div class="phase-name">Activation</div>
+      <div class="phase-duration">Weeks 1–10 · every session</div>
+      <div class="phase-desc">Building the mind-muscle connection on the left side. The goal isn't strength yet — it's <em>felt</em> activation. You're teaching the nervous system to recruit the left glute med instead of defaulting to the TFL and right-side compensation. Keep all your normal training. Add the 3 activation exercises as a pre-session warm-up every time.</div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num">Phase 2</div>
+      <div class="phase-name">Loaded strength</div>
+      <div class="phase-duration">Weeks 6–20 · overlaps with Phase 1</div>
+      <div class="phase-desc">Real load on the left side. Single-leg RDLs, Copenhagen holds, step-downs with control. The step-down test is your weekly benchmark — measurably less knee cave and hip drop over this period. Bilateral deadlifts stay. You're adding single-leg work alongside them, not replacing.</div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num">Phase 3</div>
+      <div class="phase-name">Sport integration</div>
+      <div class="phase-duration">Months 5–12</div>
+      <div class="phase-desc">The left glute med needs to fire correctly at pace, under fatigue, in cuts and sprints — not just in the gym. Fatigue-state checks during runs and second-half soccer awareness are your tools. By month 9–12 the compensation pattern should be significantly reduced even late in hard sessions.</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Key milestones</div>
+    <div style="padding: 0 4px">
+      <div class="log-entry">
+        <div class="log-dot"></div>
+        <div><div class="log-date">Weeks 6–10</div><div class="log-detail">Left side activation clearly felt during exercises</div></div>
+      </div>
+      <div class="log-entry">
+        <div class="log-dot med"></div>
+        <div><div class="log-date">Months 3–4</div><div class="log-detail">Step-down test visibly more symmetric left vs right</div></div>
+      </div>
+      <div class="log-entry">
+        <div class="log-dot med"></div>
+        <div><div class="log-date">Month 5–6</div><div class="log-detail">Left lateral hip tightness noticeably reduced</div></div>
+      </div>
+      <div class="log-entry">
+        <div class="log-dot"></div>
+        <div><div class="log-date">Month 8–12</div><div class="log-detail">Pattern holds under fatigue — soccer 2nd half, long run back-half</div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Remember</div>
+    <div style="font-size:12px; color:var(--muted); line-height:1.8; padding: 0 4px 32px">
+      Keep the deadlifts. Keep the bike. Keep the soccer.<br><br>
+      The program wraps <em>around</em> your training. 20 minutes of targeted work added to sessions you're already doing is enough. A program you actually do for 12 months beats a perfect program you abandon at week 6.<br><br>
+      <span style="color:var(--warn)">One physio session</span> in month 1–2 to confirm your activation is hitting the glute med and not the TFL will save months of working on the wrong thing.
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbybQj2L7Y01HSrgOuPJG_1CwGDBuZdjk062FMnzXji1D2sUojQv912cIksj3zE_fJMnOg/exec';
+
+  let state = {
+    sessionType: null,
+    checks: {},
+    symScore: null,
+    remoteLog: []
+  };
+
+  // --- UI ---
+  function showPage(name, tabEl) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    if (tabEl) tabEl.classList.add('active');
+    if (name === 'progress') loadProgress();
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '') + ' show';
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function setSyncStatus(status, text) {
+    const dot = document.getElementById('sync-dot');
+    const txt = document.getElementById('sync-text');
+    dot.className = 'sync-dot ' + status;
+    txt.textContent = text;
+  }
+
+  function selectType(btn, type) {
+    document.querySelectorAll('.stype-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.sessionType = type;
+    ['lift','run','ride','soccer'].forEach(t => {
+      const el = document.getElementById(t + '-block');
+      if (el) el.style.display = 'none';
+    });
+    const map = { Lift:'lift', Run:'run', Ride:'ride', Soccer:'soccer' };
+    if (map[type]) {
+      const el = document.getElementById(map[type] + '-block');
+      if (el) el.style.display = 'block';
+    }
+  }
+
+  function toggleEx(i) {
+    document.getElementById('ex-' + i).classList.toggle('open');
+  }
+
+  function toggleCheck(i) {
+    const chk = document.getElementById('chk-' + i);
+    state.checks[i] = chk.classList.toggle('done');
+  }
+
+  function selectSym(score) {
+    state.symScore = score;
+    [1,2,3].forEach(s => {
+      document.getElementById('sym-' + s).classList.remove('sel-1','sel-2','sel-3');
+    });
+    document.getElementById('sym-' + score).classList.add('sel-' + score);
+  }
+
+  // --- LOG ---
+  async function logSession() {
+    if (!state.sessionType) { showToast('Pick a session type first', true); return; }
+    if (state.symScore === null) { showToast('Rate the symmetry check', true); return; }
+
+    const btn = document.getElementById('log-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    setSyncStatus('syncing', 'Syncing to Google Sheets…');
+
+    const symLabels = { 1: 'Very asymmetric', 2: 'Improving', 3: 'Feeling close' };
+    const doneChecks = Object.values(state.checks).filter(Boolean).length;
+
+    const payload = {
+      date: new Date().toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
+      type: state.sessionType,
+      sym: state.symScore,
+      symLabel: symLabels[state.symScore],
+      checks: doneChecks
+    };
+
+    try {
+      await fetch(SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      setSyncStatus('synced', 'Saved to Google Sheets ✓');
+      showToast('Session logged ✓');
+
+      // Reset form
+      state.sessionType = null;
+      state.symScore = null;
+      state.checks = {};
+      document.querySelectorAll('.stype-btn').forEach(b => b.classList.remove('selected'));
+      document.querySelectorAll('.ex-check').forEach(c => c.classList.remove('done'));
+      [1,2,3].forEach(s => document.getElementById('sym-' + s).classList.remove('sel-1','sel-2','sel-3'));
+      ['lift','run','ride','soccer'].forEach(t => {
+        const el = document.getElementById(t + '-block');
+        if (el) el.style.display = 'none';
+      });
+
+    } catch(err) {
+      setSyncStatus('error', 'Sync failed — check connection');
+      showToast('Could not save — try again', true);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Log this session';
+  }
+
+  // --- PROGRESS ---
+  async function loadProgress() {
+    document.getElementById('log-list').innerHTML = '<div class="loading-row"><div class="spinner"></div> Loading from Google Sheets…</div>';
+
+    try {
+      const res = await fetch(SHEET_URL + '?t=' + Date.now());
+      const data = await res.json();
+      const rows = data.rows || [];
+
+      // Remove header row if present
+      const dataRows = rows.filter(r => r[0] !== 'Date' && r[0] !== '');
+
+      state.remoteLog = dataRows.map(r => ({
+        date: r[0], type: r[1], sym: parseInt(r[2]) || 0, symLabel: r[3], checks: r[4]
+      })).reverse();
+
+      renderStats();
+      renderChart();
+      renderLogList();
+
+    } catch(err) {
+      document.getElementById('log-list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Could not load from Google Sheets.<br>Check your connection and try refreshing.</div>';
+      document.getElementById('stat-sessions').textContent = '—';
+      document.getElementById('stat-streak').textContent = '—';
+    }
+  }
+
+  function renderStats() {
+    const log = state.remoteLog;
+    document.getElementById('stat-sessions').textContent = log.length;
+
+    // Simple week streak — count distinct calendar weeks represented
+    const weeks = new Set(log.map(e => {
+      const d = new Date(e.date);
+      const jan1 = new Date(d.getFullYear(), 0, 1);
+      return d.getFullYear() + '-W' + Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    }));
+    document.getElementById('stat-streak').textContent = weeks.size;
+  }
+
+  function renderChart() {
+    const svg = document.getElementById('sym-chart');
+    const log = state.remoteLog;
+    if (log.length < 2) {
+      svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log more sessions to see trend</text>';
+      return;
+    }
+    const data = log.slice().reverse().slice(-12).map(e => e.sym).filter(v => v > 0);
+    if (data.length < 2) { svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log more sessions to see trend</text>'; return; }
+    const n = data.length;
+    const W = 340, H = 80, pad = 24;
+    const xStep = (W - pad*2) / Math.max(n - 1, 1);
+    const pts = data.map((v, i) => ({ x: pad + i * xStep, y: H - pad - ((v - 1) / 2) * (H - pad*2) }));
+    const line = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
+    const fill = line + ` L${pts[pts.length-1].x},${H} L${pts[0].x},${H} Z`;
+    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--accent)"/>`).join('');
+    const gridLabels = ['Asymmetric','Improving','Close'].map((l, i) => {
+      const y = H - pad - (i / 2) * (H - pad*2);
+      return `<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <text x="${pad-4}" y="${y+4}" text-anchor="end" font-size="8" font-family="DM Mono" fill="rgba(232,228,217,0.22)">${l}</text>`;
+    }).join('');
+    svg.innerHTML = `
+      <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c8f060" stop-opacity="0.2"/><stop offset="100%" stop-color="#c8f060" stop-opacity="0"/></linearGradient></defs>
+      ${gridLabels}
+      <path d="${fill}" fill="url(#cg)"/>
+      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    `;
+  }
+
+  function renderLogList() {
+    const list = document.getElementById('log-list');
+    const log = state.remoteLog;
+    if (log.length === 0) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No sessions yet.<br>Log your first session on the Today tab.</div>';
+      return;
+    }
+    const dotClass = { 1: 'low', 2: 'med', 3: '' };
+    list.innerHTML = log.slice(0, 30).map(e => `
+      <div class="log-entry">
+        <div class="log-dot ${dotClass[e.sym] || ''}"></div>
+        <div>
+          <div class="log-date">${e.date} · ${e.type || '—'}</div>
+          <div class="log-sym">Symmetry: ${e.symLabel || '—'} · ${e.checks || 0} exercises checked</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Init
+  setSyncStatus('', 'Ready to sync to Google Sheets');
+</script>
+</body>
+</html>
