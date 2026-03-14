@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hamstring & Glute · Dumbbell</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0d; --surface: #1a1a16; --border: rgba(255,255,255,0.08);
+    --text: #e8e4d9; --muted: rgba(232,228,217,0.45);
+    --accent: #c8f060; --accent-dim: rgba(200,240,96,0.12);
+    --warn: #f0a060; --warn-dim: rgba(240,160,96,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 20px 100px; }
+  .container { max-width: 600px; margin: 0 auto; }
+
+  .page-label { font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .page-title { font-family: 'Fraunces', serif; font-weight: 300; font-size: 26px; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+  .page-title em { font-style: italic; color: var(--accent); }
+  .page-sub { font-size: 11px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+
+  /* Session builder */
+  .session-built { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 20px; display:none; }
+  .session-built.visible { display: block; }
+  .session-built-label { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+  .session-built-items { display: flex; flex-direction: column; gap: 6px; }
+  .session-built-item { font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .session-built-item::before { content: '→'; color: var(--accent); flex-shrink: 0; }
+  .session-clear { font-family: var(--mono,monospace); font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 99px; padding: 5px 12px; cursor: pointer; margin-top: 10px; }
+
+  /* Group */
+  .group { margin-bottom: 28px; }
+  .group-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .group-label { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .group-instruction { font-size: 11px; color: var(--accent); }
+  .group-note { font-size: 11px; color: var(--warn); margin-bottom: 10px; line-height: 1.6; padding: 8px 12px; background: var(--warn-dim); border-radius: 8px; border-left: 2px solid var(--warn); }
+
+  /* Exercise cards */
+  .ex-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.2s; }
+  .ex-card:hover { border-color: rgba(255,255,255,0.15); }
+  .ex-card.selected { border-color: var(--accent); background: rgba(200,240,96,0.04); }
+  .ex-card.open .chevron { transform: rotate(180deg); }
+  .ex-card.open .details { display: block; }
+
+  .ex-header { display: flex; align-items: center; gap: 0; padding: 14px 16px; }
+  .ex-select { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; cursor: pointer; margin-right: 12px; }
+  .ex-card.selected .ex-select { background: var(--accent); border-color: var(--accent); }
+  .ex-card.selected .ex-select::after { content: '✓'; font-size: 11px; color: #0f0f0d; font-weight: 600; }
+  .ex-info { flex: 1; }
+  .ex-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .ex-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 10px; font-weight: 500; border-radius: 99px; padding: 2px 8px; }
+  .tag-h { background: #3C3489; color: #CECBF6; }
+  .tag-g { background: #085041; color: #9FE1CB; }
+  .tag-d { background: #633806; color: #FAC775; }
+  .tag-star { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,96,0.3); }
+  .chevron { font-size: 11px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; cursor: pointer; padding: 4px; }
+
+  .details { display: none; padding: 0 16px 14px; border-top: 0.5px solid var(--border); padding-top: 12px; }
+  .detail-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .detail-label { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .detail-val { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .tip { font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.04); border-radius: 10px; padding: 10px 13px; line-height: 1.7; }
+  .tip strong { color: var(--warn); font-weight: 500; }
+  .modification { font-size: 11px; color: var(--muted); margin-top: 8px; padding: 8px 12px; background: var(--accent-dim); border-radius: 8px; border-left: 2px solid rgba(200,240,96,0.4); line-height: 1.6; }
+  .modification span { color: var(--accent); }
+
+  .footer { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.7; padding: 0 4px; }
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); text-decoration: none; margin-bottom: 24px; }
+  .back-link:hover { color: var(--text); }
+
+  /* Timer */
+  .timer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a16; border-top: 1px solid rgba(255,255,255,0.08); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; z-index: 100; max-width: 600px; margin: 0 auto; }
+  .timer-display { font-family: 'Fraunces', serif; font-weight: 300; font-size: 36px; color: var(--accent); line-height: 1; min-width: 90px; letter-spacing: -1px; }
+  .timer-display.paused { color: var(--muted); }
+  .timer-btns { display: flex; gap: 10px; }
+  .timer-btn { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; padding: 10px 20px; border-radius: 99px; border: none; cursor: pointer; transition: opacity 0.15s; }
+  .timer-btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #0f0f0d; }
+  .btn-secondary { background: rgba(255,255,255,0.08); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="back-link">← Back to tracker</a>
+
+  <div class="page-label">Single dumbbell</div>
+  <div class="page-title">Hamstrings <em>&</em> glutes</div>
+  <div class="page-sub">Pick one from each group per session. The single-leg RDL is non-negotiable — always include it. Everything else rotates.</div>
+
+  <!-- SESSION SUMMARY -->
+  <div class="session-built" id="session-summary">
+    <div class="session-built-label">Today's session</div>
+    <div class="session-built-items" id="session-items"></div>
+    <button class="session-clear" onclick="clearSession()">Clear selection</button>
+  </div>
+
+  <!-- GROUP A: NON-NEGOTIABLE -->
+  <div class="group">
+    <div class="group-header">
+      <span class="group-label">Group A</span>
+      <span class="group-instruction">Always include this one</span>
+    </div>
+
+    <div class="ex-card" id="card-slrdl">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('slrdl', 'A')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Single-leg RDL</div>
+          <div class="ex-subtitle">3 × 10 per leg · moderate–heavy</div>
+          <div class="tags"><span class="tag tag-h">Hamstrings</span><span class="tag tag-g">Glutes</span><span class="tag tag-star">★ Non-negotiable</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('slrdl')">▼</span>
+      </div>
+      <div class="details" id="det-slrdl">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3 sets × 10 per leg</div></div>
+          <div><div class="detail-label">Load</div><div class="detail-val">Heavy enough to feel it — not a balance exercise</div></div>
+        </div>
+        <div class="tip">Dumbbell in right hand for left leg. Hinge from the left hip — <strong>keep it level, don't rotate open.</strong> Feel the left hamstring and glute loading. Soft left knee throughout. This is your highest-value exercise given the hamstring graft and left glute med history.</div>
+        <div class="modification"><span>Left-side focus:</span> always do left leg first. Right side will be stronger — that's expected. The asymmetry narrowing over months is your progress marker.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP B: HINGE -->
+  <div class="group">
+    <div class="group-header">
+      <span class="group-label">Group B</span>
+      <span class="group-instruction">Pick 1 — hinge pattern</span>
+    </div>
+    <div class="group-note">Don't do both the RDL and Good Morning in the same session — they're too similar.</div>
+
+    <div class="ex-card" id="card-rdl">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('rdl', 'B')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Romanian deadlift (RDL)</div>
+          <div class="ex-subtitle">3–4 × 10–15 · bilateral</div>
+          <div class="tags"><span class="tag tag-h">Hamstrings</span><span class="tag tag-g">Glutes</span><span class="tag tag-d">Beginner–Intermediate</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('rdl')">▼</span>
+      </div>
+      <div class="details" id="det-rdl">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3–4 sets × 10–15 reps</div></div>
+          <div><div class="detail-label">Hold</div><div class="detail-val">Both hands, one end of dumbbell</div></div>
+        </div>
+        <div class="tip">Hinge at hips pushing them back, flat back, soft knees. Lower until deep hamstring stretch (mid-shin), then drive hips forward to stand. <strong>Keep the dumbbell close to your legs throughout.</strong></div>
+        <div class="modification"><span>Watch for:</span> the right side dominating. If one hip is hinging more than the other, slow down and feel for symmetry.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="card-gm">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('gm', 'B')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Good morning</div>
+          <div class="ex-subtitle">3 × 10–12 · light-moderate</div>
+          <div class="tags"><span class="tag tag-h">Hamstrings</span><span class="tag tag-g">Glutes</span><span class="tag tag-d">Intermediate</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('gm')">▼</span>
+      </div>
+      <div class="details" id="det-gm">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3 sets × 10–12 reps</div></div>
+          <div><div class="detail-label">Hold</div><div class="detail-val">Both hands behind head or hugged to chest</div></div>
+        </div>
+        <div class="tip">Braced core, slight knee bend. Hinge at hips until torso nearly parallel to floor. <strong>Keep back completely flat — do not round.</strong> Feel the hamstring stretch, drive hips forward to stand. Start light — this loads the lower back more than an RDL.</div>
+        <div class="modification"><span>Easier version:</span> reduce range of motion — hinge only to 45° until you're comfortable with the movement pattern.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP C: SQUAT/LUNGE -->
+  <div class="group">
+    <div class="group-header">
+      <span class="group-label">Group C</span>
+      <span class="group-instruction">Pick 1 — squat or lunge pattern</span>
+    </div>
+    <div class="group-note">Don't do both reverse lunge and sumo squat in the same session.</div>
+
+    <div class="ex-card" id="card-rl">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('rl', 'C')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Reverse lunge</div>
+          <div class="ex-subtitle">3 × 10–12 per leg · goblet hold</div>
+          <div class="tags"><span class="tag tag-g">Glutes</span><span class="tag tag-h">Hamstrings</span><span class="tag tag-d">Beginner–Intermediate</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('rl')">▼</span>
+      </div>
+      <div class="details" id="det-rl">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3 sets × 10–12 per leg</div></div>
+          <div><div class="detail-label">Hold</div><div class="detail-val">Goblet position at chest</div></div>
+        </div>
+        <div class="tip">Step back, lower back knee toward floor. <strong>Keep front shin vertical and torso upright.</strong> Drive through front heel to return. Loads glutes and hamstrings of the front leg. Gentler on the knees than forward lunges.</div>
+        <div class="modification"><span>Left-side watch:</span> the left knee will tend to cave in on the left-leg-forward version. Focus on keeping the left knee tracking over the second toe throughout.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="card-sq">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('sq', 'C')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Sumo squat</div>
+          <div class="ex-subtitle">3–4 × 12–15 · hang between legs</div>
+          <div class="tags"><span class="tag tag-g">Glutes</span><span class="tag tag-h">Inner hamstrings</span><span class="tag tag-d">Beginner</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('sq')">▼</span>
+      </div>
+      <div class="details" id="det-sq">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3–4 sets × 12–15 reps</div></div>
+          <div><div class="detail-label">Hold</div><div class="detail-val">Both hands, hang vertically between legs</div></div>
+        </div>
+        <div class="tip">Feet wider than shoulder-width, toes out 30–45°. Squat to parallel, chest up, knees tracking over toes. <strong>Drive through heels, squeeze glutes at the top.</strong></div>
+        <div class="modification"><span>Deeper range:</span> stand on two weight plates or books to allow the dumbbell to drop lower, increasing the range of motion through the glutes.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROUP D: FINISHER -->
+  <div class="group">
+    <div class="group-header">
+      <span class="group-label">Group D</span>
+      <span class="group-instruction">Pick 1 — finisher (optional but recommended)</span>
+    </div>
+
+    <div class="ex-card" id="card-ht">
+      <div class="ex-header">
+        <div class="ex-select" onclick="toggleSelect('ht', 'D')"></div>
+        <div class="ex-info">
+          <div class="ex-title">Hip thrust / glute bridge</div>
+          <div class="ex-subtitle">3–4 × 15–20 · dumbbell across hips</div>
+          <div class="tags"><span class="tag tag-g">Glutes</span><span class="tag tag-h">Hamstrings</span><span class="tag tag-d">Beginner</span></div>
+        </div>
+        <span class="chevron" onclick="event.stopPropagation(); toggleEx('ht')">▼</span>
+      </div>
+      <div class="details" id="det-ht">
+        <div class="detail-row">
+          <div><div class="detail-label">Sets & Reps</div><div class="detail-val">3–4 sets × 15–20 reps</div></div>
+          <div><div class="detail-label">Hold</div><div class="detail-val">Across hips, both hands stabilising</div></div>
+        </div>
+        <div class="tip">Lie on back, knees bent, dumbbell across hip crease. Drive through heels until shoulders to knees form a straight line. <strong>Squeeze glutes hard at top for 1–2 seconds, lower slowly.</strong> For a hip thrust, rest upper back on a couch or bench for greater range.</div>
+        <div class="modification"><span>Single-leg version:</span> extend one leg and do single-leg glute bridges — left side will feel significantly weaker. This is a useful asymmetry check and a progression target.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Always warm up with 5–10 min of light cardio and dynamic stretches. Do the pre-session activation exercises before this — banded side steps, single-leg stance, single-leg bridge.</div>
+
+<!-- TIMER BAR -->
+<div class="timer-bar">
+  <div class="timer-display" id="timer-display">0:00</div>
+  <div class="timer-btns">
+    <button class="timer-btn btn-primary" id="timer-playpause" onclick="timerPlayPause()">Start</button>
+    <button class="timer-btn btn-secondary" id="timer-restart" onclick="timerRestart()">Restart</button>
+  </div>
+</div>
+</div>
+
+<script>
+  const groups = {};
+  const selections = {};
+
+  function toggleSelect(id, group) {
+    const card = document.getElementById('card-' + id);
+    const isSelected = card.classList.contains('selected');
+
+    // Deselect previous in same group
+    if (groups[group] && groups[group] !== id) {
+      const prev = document.getElementById('card-' + groups[group]);
+      if (prev) prev.classList.remove('selected');
+    }
+
+    if (isSelected) {
+      card.classList.remove('selected');
+      delete groups[group];
+      delete selections[group];
+    } else {
+      card.classList.add('selected');
+      groups[group] = id;
+      const title = card.querySelector('.ex-title').textContent;
+      const sub = card.querySelector('.ex-subtitle').textContent;
+      selections[group] = title + ' · ' + sub;
+    }
+
+    updateSummary();
+  }
+
+  function toggleEx(id) {
+    const card = document.getElementById('card-' + id);
+    card.classList.toggle('open');
+  }
+
+  function updateSummary() {
+    const summary = document.getElementById('session-summary');
+    const items = document.getElementById('session-items');
+    const keys = Object.keys(selections).sort();
+
+    if (keys.length === 0) {
+      summary.classList.remove('visible');
+      return;
+    }
+
+    summary.classList.add('visible');
+    items.innerHTML = keys.map(k => {
+      const label = k === 'A' ? 'Non-negotiable' : k === 'B' ? 'Hinge' : k === 'C' ? 'Squat/lunge' : 'Finisher';
+      return `<div class="session-built-item"><div><span style="color:var(--muted);font-size:10px">${label} — </span>${selections[k]}</div></div>`;
+    }).join('');
+  }
+
+  function clearSession() {
+    Object.keys(groups).forEach(g => {
+      const card = document.getElementById('card-' + groups[g]);
+      if (card) card.classList.remove('selected');
+    });
+    Object.keys(groups).forEach(k => delete groups[k]);
+    Object.keys(selections).forEach(k => delete selections[k]);
+    updateSummary();
+  }
+
+  // --- TIMER ---
+  let timerSeconds = 0;
+  let timerRunning = false;
+  let timerInterval = null;
+
+  function timerPlayPause() {
+    if (timerRunning) {
+      // Pause
+      clearInterval(timerInterval);
+      timerRunning = false;
+      document.getElementById('timer-playpause').textContent = 'Resume';
+      document.getElementById('timer-display').classList.add('paused');
+    } else {
+      // Start / Resume
+      timerRunning = true;
+      document.getElementById('timer-playpause').textContent = 'Pause';
+      document.getElementById('timer-display').classList.remove('paused');
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+  }
+
+  function timerRestart() {
+    clearInterval(timerInterval);
+    timerSeconds = 0;
+    timerRunning = true;
+    updateTimerDisplay();
+    document.getElementById('timer-playpause').textContent = 'Pause';
+    document.getElementById('timer-display').classList.remove('paused');
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('timer-display').textContent = m + ':' + String(s).padStart(2, '0');
+  }
+</script>
+</body>
+</html>
