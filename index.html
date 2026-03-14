@@ -1052,6 +1052,7 @@
       type: state.sessionType,
       sym: state.symScore,
       symLabel: symLabels[state.symScore],
+      pushupVariation: '',
       checks: doneChecks,
       energy: state.energy ? energyLabels[state.energy] : '',
       rightTension: state.rightTension ? tensionLabels[state.rightTension] : '',
@@ -1106,9 +1107,10 @@
       const dataRows = rows.filter(r => r[0] !== 'Date' && r[0] !== '');
 
       state.remoteLog = dataRows.map(r => ({
-        date: r[0], type: r[1], sym: parseInt(r[2]) || 0, symLabel: r[3], checks: r[4],
-        energy: r[5] || '', rightTension: r[6] || '', dayOfWeek: r[7] || '',
-        timeOfDay: r[8] || '', notes: r[9] || ''
+        date: r[0], type: r[1], sym: r[2] !== '' ? parseInt(r[2]) : null,
+        symLabel: r[3] || '', pushupVariation: r[4] || '', checks: r[5] || 0,
+        energy: r[6] || '', rightTension: r[7] || '', dayOfWeek: r[8] || '',
+        timeOfDay: r[9] || '', notes: r[10] || ''
       })).reverse();
 
       renderStats();
@@ -1126,7 +1128,7 @@
   function renderStats() {
     const log = state.remoteLog;
     // Only count non-break, non-morning sessions
-    const sessions = log.filter(e => e.type && !e.type.startsWith('Break') && !e.type.startsWith('Morning'));
+    const sessions = log.filter(e => e.sym !== null && e.sym > 0);
     document.getElementById('stat-sessions').textContent = sessions.length;
 
     const weeks = new Set(sessions.map(e => {
@@ -1150,7 +1152,7 @@
   function renderRTChart() {
     const svg = document.getElementById('rt-chart');
     if (!svg) return;
-    const log = state.remoteLog.filter(e => e.rightTension && e.rightTension !== '' && !e.type.startsWith('Break'));
+    const log = state.remoteLog.filter(e => e.rightTension && e.rightTension !== '' && !e.type.startsWith('Break') && !e.type.startsWith('Morning'));
     if (log.length < 2) {
       svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log right tension to see trend</text>';
       return;
@@ -1234,7 +1236,7 @@ Write a 4-6 sentence plain-English analysis. Cover: symmetry trend direction, wh
       svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log more sessions to see trend</text>';
       return;
     }
-    const data = log.slice().reverse().slice(-12).map(e => e.sym).filter(v => v > 0);
+    const data = log.slice().reverse().filter(e => e.sym !== null && e.sym > 0).slice(-12).map(e => e.sym);
     if (data.length < 2) { svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log more sessions to see trend</text>'; return; }
     const n = data.length;
     const W = 340, H = 80, pad = 24;
@@ -1277,7 +1279,7 @@ Write a 4-6 sentence plain-English analysis. Cover: symmetry trend direction, wh
         <div class="log-dot ${isBreak ? 'med' : isMorning ? '' : (dotClass[e.sym] || '')}"></div>
         <div style="flex:1">
           <div class="log-date">${e.date} · ${e.type || '—'}</div>
-          <div class="log-sym">${isBreak ? e.symLabel || '—' : 'Symmetry: ' + (e.symLabel || '—')}${extraStr} · ${e.checks || 0} done</div>
+          <div class="log-sym">${isBreak ? 'Break' : isMorning ? ('Pushup: ' + (e.pushupVariation || '—')) : ('Symmetry: ' + (e.symLabel || '—'))}${extraStr} · ${e.checks || 0} done</div>
           ${notesStr}
         </div>
       </div>`;
@@ -1384,9 +1386,15 @@ Write a 4-6 sentence plain-English analysis. Cover: symmetry trend direction, wh
     const payload = {
       date: new Date().toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
       type: 'Break · ' + typeLabels[breakState.type],
-      sym: 0,
-      symLabel: doneChecks + ' exercises done',
-      checks: doneChecks
+      sym: '',
+      symLabel: '',
+      pushupVariation: '',
+      checks: doneChecks,
+      energy: '',
+      rightTension: '',
+      dayOfWeek: new Date().toLocaleDateString('en-CA', { weekday: 'long' }),
+      timeOfDay: new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening',
+      notes: ''
     };
 
     try {
@@ -1478,8 +1486,9 @@ Write a 4-6 sentence plain-English analysis. Cover: symmetry trend direction, wh
     const payload = {
       date: now.toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
       type: 'Morning · ' + (morningState.mode === 'full' ? '15 min' : '5 min'),
-      sym: 0,
-      symLabel: 'Pushup: ' + pvarLabels[morningState.pvar],
+      sym: '',
+      symLabel: '',
+      pushupVariation: pvarLabels[morningState.pvar],
       checks: doneChecks,
       energy: '',
       rightTension: morningRightTension ? ['','Low','Moderate','High'][morningRightTension] : '',
