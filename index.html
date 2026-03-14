@@ -122,6 +122,23 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .quick-row { display:flex; gap:8px; margin-bottom:0; }
+  .quick-btn { flex:1; padding:9px 6px; border-radius:10px; border:1px solid var(--border); background:none; font-family:var(--mono); font-size:11px; color:var(--muted); cursor:pointer; text-align:center; line-height:1.4; transition:all 0.15s; }
+  .quick-btn.sel-e { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .quick-btn.sel-w { background:rgba(200,240,96,0.08); border-color:rgba(200,240,96,0.4); color:rgba(200,240,96,0.8); }
+  .quick-btn.sel-h { background:var(--warn-dim); border-color:var(--warn); color:var(--warn); }
+  .quick-btn.sel-t-low { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .quick-btn.sel-t-med { background:var(--warn-dim); border-color:var(--warn); color:var(--warn); }
+  .quick-btn.sel-t-high { background:rgba(240,96,96,0.12); border-color:var(--red); color:var(--red); }
+  .notes-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-family:var(--mono); font-size:12px; color:var(--text); resize:none; margin-top:8px; line-height:1.6; }
+  .notes-input:focus { outline:none; border-color:rgba(200,240,96,0.4); }
+  .notes-input::placeholder { color:var(--muted); }
+  .ai-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:20px; }
+  .ai-card-title { font-size:10px; letter-spacing:0.12em; color:var(--muted); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+  .ai-body { font-size:13px; color:var(--text); line-height:1.8; }
+  .ai-body.muted { color:var(--muted); font-size:12px; }
+  .analyse-btn { font-family:var(--mono); font-size:11px; color:#0f0f0d; background:var(--accent); border:none; border-radius:99px; padding:6px 14px; cursor:pointer; font-weight:500; }
+  .analyse-btn:disabled { opacity:0.4; cursor:not-allowed; }
   .refresh-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 99px; padding: 6px 14px; cursor: pointer; float: right; margin-top: -4px; }
   .refresh-btn:active { opacity: 0.6; }
 </style>
@@ -141,6 +158,8 @@
 
   <div class="tabs">
     <button class="tab active" onclick="showPage('today', this)">Today</button>
+    <button class="tab" onclick="showPage('morning', this)">Morning</button>
+    <button class="tab" onclick="showPage('breaks', this)">Breaks</button>
     <button class="tab" onclick="showPage('progress', this)">Progress</button>
     <button class="tab" onclick="showPage('guide', this)">Guide</button>
   </div>
@@ -315,9 +334,24 @@
     </div>
 
     <div class="divider"></div>
-    <div class="section-label">Weekly symmetry check</div>
+
+    <div class="section-label">Before you started — right side tension</div>
+    <div class="quick-row" style="margin-bottom:16px">
+      <button class="quick-btn" id="rt-1" onclick="selectRT(1)">Low<br><span style="font-size:10px;opacity:0.6">relaxed</span></button>
+      <button class="quick-btn" id="rt-2" onclick="selectRT(2)">Moderate<br><span style="font-size:10px;opacity:0.6">noticeable</span></button>
+      <button class="quick-btn" id="rt-3" onclick="selectRT(3)">High<br><span style="font-size:10px;opacity:0.6">tight/braced</span></button>
+    </div>
+
+    <div class="section-label">Energy going in</div>
+    <div class="quick-row" style="margin-bottom:16px">
+      <button class="quick-btn" id="en-1" onclick="selectEnergy(1)">Low</button>
+      <button class="quick-btn" id="en-2" onclick="selectEnergy(2)">Normal</button>
+      <button class="quick-btn" id="en-3" onclick="selectEnergy(3)">High</button>
+    </div>
+
+    <div class="section-label">Symmetry check</div>
     <div class="symmetry-block">
-      <div class="sym-question">How did the left leg step-down feel vs the right today?</div>
+      <div class="sym-question" id="sym-question">How did the left side feel vs the right today?</div>
       <div class="sym-options">
         <button class="sym-btn" id="sym-1" onclick="selectSym(1)">Still very<br>asymmetric</button>
         <button class="sym-btn" id="sym-2" onclick="selectSym(2)">Improving,<br>still off</button>
@@ -325,12 +359,449 @@
       </div>
     </div>
 
+    <div class="section-label" style="margin-bottom:6px">Notes <span style="color:var(--muted);font-size:9px;letter-spacing:0">(optional — one line)</span></div>
+    <textarea id="session-notes" class="notes-input" rows="2" placeholder="e.g. left knee felt better on cuts, step-down noticeably cleaner…"></textarea>
+
     <button class="log-btn" id="log-btn" onclick="logSession()">Log this session</button>
 
     <div class="sync-status" id="sync-status">
       <div class="sync-dot" id="sync-dot"></div>
       <span id="sync-text">Ready to sync to Google Sheets</span>
     </div>
+  </div>
+
+  <!-- MORNING -->
+  <div class="page" id="page-morning">
+
+    <div style="margin-top:16px; margin-bottom:20px">
+      <div class="session-type">
+        <button class="stype-btn" id="mmode-short" onclick="selectMorningMode('short', this)">⚡ 5 min</button>
+        <button class="stype-btn" id="mmode-full" onclick="selectMorningMode('full', this)">🌅 15 min</button>
+      </div>
+      <div style="font-size:11px; color:var(--muted); line-height:1.6">Pick your mode — office days use 5 min, WFH days use 15 min.</div>
+    </div>
+
+    <div class="section-label">Always <span style="color:var(--accent)">· push + pull + shoulder</span></div>
+
+    <div class="ex-card" id="mex-0">
+      <div class="ex-card-header" onclick="toggleMEx(0)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="mchk-0" onclick="event.stopPropagation();toggleMCheck(0)"></div>
+          <div>
+            <div class="ex-name">Pushup progression</div>
+            <div class="ex-meta">3 sets · stop 1–2 reps before failure</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">You're at ~15 clean reps. <strong>Don't grind out 20 standard pushups every day — that plateaus fast.</strong> Rotate variations week to week: standard → close grip → archer (one arm reaches wide, load shifts to working side) → deficit (hands on dumbbells for deeper range). Stop 1–2 reps before form breaks. Quality over volume.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="mex-1">
+      <div class="ex-card-header" onclick="toggleMEx(1)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="mchk-1" onclick="event.stopPropagation();toggleMCheck(1)"></div>
+          <div>
+            <div class="ex-name">Band pull-apart</div>
+            <div class="ex-meta">3 × 15 · light-medium band</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">Hold band at shoulder height, arms straight. Pull apart until band touches chest — <strong>squeeze shoulder blades together at the end, don't just pull with arms.</strong> Directly counteracts the right-shoulder-forward posture from your thoracic rotation asymmetry. Every push needs a pull — this is it on 5 min days.</div>
+      </div>
+    </div>
+
+    <div class="ex-card" id="mex-2">
+      <div class="ex-card-header" onclick="toggleMEx(2)">
+        <div class="ex-card-left">
+          <div class="ex-check" id="mchk-2" onclick="event.stopPropagation();toggleMCheck(2)"></div>
+          <div>
+            <div class="ex-name">Pike pushup</div>
+            <div class="ex-meta">2 × 8–10 · shoulder strength</div>
+          </div>
+        </div>
+        <span class="ex-chevron">▼</span>
+      </div>
+      <div class="ex-detail">
+        <div class="ex-cue">Hips high, body in an inverted V. Bend elbows to lower the top of your head toward the floor, press back up. <strong>Targets the shoulders overhead with no equipment.</strong> As this gets easy, elevate feet on a chair to increase the angle.</div>
+      </div>
+    </div>
+
+    <div id="morning-extras" style="display:none">
+      <div class="section-label" style="margin-top:28px">15 min extras <span style="color:var(--warn)">· WFH days only</span></div>
+
+      <div class="ex-card" id="mex-3">
+        <div class="ex-card-header" onclick="toggleMEx(3)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="mchk-3" onclick="event.stopPropagation();toggleMCheck(3)"></div>
+            <div>
+              <div class="ex-name">Single-arm dumbbell row</div>
+              <div class="ex-meta">Left side first · 3 × 10–12 each</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue"><strong>Always do left side first.</strong> Brace with left hand and knee on a bench. Row dumbbell to hip, lead with elbow, squeeze left shoulder blade in at the top. Directly addresses left shoulder blade instability — the upper body mirror of what we're doing with the left glute med.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="mex-4">
+        <div class="ex-card-header" onclick="toggleMEx(4)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="mchk-4" onclick="event.stopPropagation();toggleMCheck(4)"></div>
+            <div>
+              <div class="ex-name">Dumbbell shoulder press</div>
+              <div class="ex-meta">3 × 10 · seated or standing</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Press both dumbbells overhead. <strong>Watch for the right shoulder shrugging or elbow flaring more than the left</strong> — that's the asymmetry showing. If right dominates, drop to single-arm and do left separately. Keep ribs down, don't arch the lower back.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="mex-5">
+        <div class="ex-card-header" onclick="toggleMEx(5)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="mchk-5" onclick="event.stopPropagation();toggleMCheck(5)"></div>
+            <div>
+              <div class="ex-name">Dead hang</div>
+              <div class="ex-meta">2 × 20–30 sec · if bar accessible</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Hang from pull-up bar — <strong>let the shoulders fully decompress, don't engage anything.</strong> Best single thing for shoulder health and thoracic decompression. Given your thoracic rotation pattern, passive hanging lets the spine and shoulder girdle find neutral. Skip only if bar isn't convenient.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="mex-6">
+        <div class="ex-card-header" onclick="toggleMEx(6)">
+          <div class="ex-card-left">
+            <div class="ex-check" id="mchk-6" onclick="event.stopPropagation();toggleMCheck(6)"></div>
+            <div>
+              <div class="ex-name">Thoracic rotation stretch</div>
+              <div class="ex-meta">Left rotation only · 10 slow reps</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Sit on floor or chair, arms crossed. Rotate upper body slowly to the <strong>left</strong> — your restricted direction. Hold 2 seconds at end range, return slowly. Works the top of the chain that the glute med work is correcting from the bottom.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Right side tension this morning</div>
+    <div class="quick-row" style="margin-bottom:16px">
+      <button class="quick-btn" id="mrt-1" onclick="selectMRT(1)">Low</button>
+      <button class="quick-btn" id="mrt-2" onclick="selectMRT(2)">Moderate</button>
+      <button class="quick-btn" id="mrt-3" onclick="selectMRT(3)">High</button>
+    </div>
+
+    <div class="section-label">Pushup variation today</div>
+    <div class="symmetry-block" style="margin-top:8px">
+      <div class="sym-question">Which variation did you use?</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px">
+        <button class="sym-btn" id="pvar-1" onclick="selectPVar(1)" style="flex:none; padding:8px 12px">Standard</button>
+        <button class="sym-btn" id="pvar-2" onclick="selectPVar(2)" style="flex:none; padding:8px 12px">Close grip</button>
+        <button class="sym-btn" id="pvar-3" onclick="selectPVar(3)" style="flex:none; padding:8px 12px">Archer</button>
+        <button class="sym-btn" id="pvar-4" onclick="selectPVar(4)" style="flex:none; padding:8px 12px">Deficit</button>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-bottom:6px">Notes <span style="color:var(--muted);font-size:9px;letter-spacing:0">(optional)</span></div>
+    <textarea id="morning-notes" class="notes-input" rows="2" placeholder="e.g. left glute fired clearly today, felt it in the right place…"></textarea>
+
+    <button class="log-btn" id="morning-log-btn" onclick="logMorning()">Log morning session</button>
+
+    <div class="sync-status" id="morning-sync-status">
+      <div class="sync-dot" id="morning-sync-dot"></div>
+      <span id="morning-sync-text">Ready to sync to Google Sheets</span>
+    </div>
+
+    <div style="font-size:11px; color:var(--muted); line-height:1.7; margin-top:20px; padding:0 2px 8px">
+      <span style="color:var(--warn)">Progression rule:</span> when you hit your rep target cleanly for 3 sessions in a row, add a set, slow the tempo (3 sec down), or move to the next variation. Never grind ugly reps.
+    </div>
+  </div>
+
+  <!-- BREAKS -->
+  <div class="page" id="page-breaks">
+
+    <div style="margin-top:16px; margin-bottom:4px">
+      <div style="font-size:11px; color:var(--muted); line-height:1.7; margin-bottom:16px">
+        Every hour of sitting reinforces the left hip flexor tightness and switches the glute med off. These breaks undo that — specifically for your pattern.
+      </div>
+
+      <!-- TIMER STRIP -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:20px">
+        <div style="font-size:10px; letter-spacing:0.12em; color:var(--muted); text-transform:uppercase; margin-bottom:12px">Break timer</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px">
+          <button class="stype-btn" onclick="startTimer(90)">90 sec</button>
+          <button class="stype-btn" onclick="startTimer(120)">2 min</button>
+          <button class="stype-btn" onclick="startTimer(180)">3 min</button>
+          <button class="stype-btn" onclick="startTimer(240)">4 min</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px">
+          <div id="timer-display" style="font-family:var(--serif); font-size:38px; font-weight:300; color:var(--accent); line-height:1; min-width:80px">—</div>
+          <button id="timer-stop-btn" onclick="stopTimer()" style="display:none; font-family:var(--mono); font-size:11px; color:var(--muted); background:none; border:1px solid var(--border); border-radius:99px; padding:6px 14px; cursor:pointer">Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BREAK TYPE SELECTOR -->
+    <div class="section-label">What kind of break?</div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px">
+
+      <button onclick="selectBreakType('reset', this)" id="btype-reset"
+        style="font-family:var(--mono); text-align:left; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:var(--surface); cursor:pointer; transition:all 0.15s">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="font-size:13px; font-weight:500; color:var(--text)">🔄 Reset</span>
+          <span style="font-size:10px; letter-spacing:0.08em; background:var(--accent-dim); color:var(--accent); border-radius:99px; padding:3px 10px">Every hour · 90 sec</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5">Hip flexor stretch + glute activation + thoracic rotation. The default break.</div>
+      </button>
+
+      <button onclick="selectBreakType('posture', this)" id="btype-posture"
+        style="font-family:var(--mono); text-align:left; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:var(--surface); cursor:pointer; transition:all 0.15s">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="font-size:13px; font-weight:500; color:var(--text)">🪑 Posture</span>
+          <span style="font-size:10px; letter-spacing:0.08em; background:var(--warn-dim); color:var(--warn); border-radius:99px; padding:3px 10px">Any time · 30 sec</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5">Stay seated. Invisible in a meeting. Foot, ribs, shoulder, glute squeeze.</div>
+      </button>
+
+      <button onclick="selectBreakType('movement', this)" id="btype-movement"
+        style="font-family:var(--mono); text-align:left; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:var(--surface); cursor:pointer; transition:all 0.15s">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <span style="font-size:13px; font-weight:500; color:var(--text)">⚡ Movement</span>
+          <span style="font-size:10px; letter-spacing:0.08em; background:rgba(200,240,96,0.06); color:rgba(200,240,96,0.6); border-radius:99px; padding:3px 10px">1–2× per day · 3–4 min</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px; line-height:1.5">Wall sit + band steps + hip flexor + stance hold. Grab the band.</div>
+      </button>
+
+    </div>
+
+    <!-- RESET BREAK — 90 sec, every 60-90 min -->
+    <div id="break-reset" style="display:none">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:14px; line-height:1.6">
+        <span style="color:var(--accent)">Every 60–90 min.</span> Undoes exactly what the last hour of sitting has reinforced. 90 seconds total.
+      </div>
+
+      <div class="ex-card" id="bex-r0">
+        <div class="ex-card-header" onclick="toggleBEx('r0')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-r0" onclick="event.stopPropagation();toggleBCheck('r0')"></div>
+            <div>
+              <div class="ex-name">Kneeling hip flexor stretch</div>
+              <div class="ex-meta">Left knee down · 30–45 sec · with glute squeeze</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Left knee on the floor, right foot forward. Before leaning in — <strong>squeeze the left glute actively first.</strong> This locks the pelvis and forces the actual hip flexor to lengthen rather than the pelvis cheating. Then slowly shift weight forward until you feel a deep stretch in the front of the left hip. Hold. This is your single most important desk break given the pattern.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-r1">
+        <div class="ex-card-header" onclick="toggleBEx('r1')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-r1" onclick="event.stopPropagation();toggleBCheck('r1')"></div>
+            <div>
+              <div class="ex-name">Standing left glute med activation</div>
+              <div class="ex-meta">Left leg · 2 × 10 sec hold</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Stand on left leg. Actively engage the outer left hip — <strong>keep the right hip from dropping.</strong> 10 second hold. The glute med has been completely switched off for the last hour. This fires it back up before you go back to sitting. Two holds is enough — quality over quantity here.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-r2">
+        <div class="ex-card-header" onclick="toggleBEx('r2')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-r2" onclick="event.stopPropagation();toggleBCheck('r2')"></div>
+            <div>
+              <div class="ex-name">Thoracic rotation left</div>
+              <div class="ex-meta">Standing · 8 slow reps</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Stand, arms crossed over chest. Rotate upper body slowly to the left — <strong>left is your restricted direction.</strong> Hold 2 seconds at end range. Sitting at a desk reinforces rightward thoracic rotation all day. Eight reps left takes 30 seconds and directly counters that.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POSTURE BREAK — seated, 30 sec -->
+    <div id="break-posture" style="display:none">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:14px; line-height:1.6">
+        <span style="color:var(--accent)">Any time, stays seated.</span> Can do mid-meeting. 30 seconds. No one will notice.
+      </div>
+
+      <div class="ex-card" id="bex-p0">
+        <div class="ex-card-header" onclick="toggleBEx('p0')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-p0" onclick="event.stopPropagation();toggleBCheck('p0')"></div>
+            <div>
+              <div class="ex-name">Tripod foot check</div>
+              <div class="ex-meta">Left foot · 5 seconds</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Feel your left foot on the floor. <strong>Three points of contact — heel, base of little toe, base of big toe — all pressing equally.</strong> Sitting tends to roll the left foot inward onto the inner edge. Resetting the tripod contact wakes up the lateral chain even while seated.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-p1">
+        <div class="ex-card-header" onclick="toggleBEx('p1')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-p1" onclick="event.stopPropagation();toggleBCheck('p1')"></div>
+            <div>
+              <div class="ex-name">Rib position reset</div>
+              <div class="ex-meta">Seated · 5 seconds</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Sitting tends to flare the left ribs and compress the right. <strong>Take a deep breath and on the exhale, gently draw the left ribs down and in.</strong> Feel the left side of your trunk lengthen slightly. This directly addresses the rib asymmetry from your thoracic rotation pattern. Takes five seconds seated at your desk.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-p2">
+        <div class="ex-card-header" onclick="toggleBEx('p2')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-p2" onclick="event.stopPropagation();toggleBCheck('p2')"></div>
+            <div>
+              <div class="ex-name">Shoulder level check</div>
+              <div class="ex-meta">Seated · 5 seconds</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Notice where your right shoulder is sitting. <strong>It's almost certainly higher and more forward than the left.</strong> Gently roll it back and down — don't force it, just release the held tension in the right upper trap. This is passive release, not an exercise. You're just becoming aware of a pattern that's happening unconsciously all day.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-p3">
+        <div class="ex-card-header" onclick="toggleBEx('p3')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-p3" onclick="event.stopPropagation();toggleBCheck('p3')"></div>
+            <div>
+              <div class="ex-name">Seated left glute squeeze</div>
+              <div class="ex-meta">3 × 5 sec isometric</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Sitting in your chair — <strong>consciously contract the left glute as hard as you can for 5 seconds, then release.</strong> Sounds almost too simple. But after an hour of sitting with the glute completely inhibited, this isometric fires the muscle and maintains some neuromuscular connection. Three squeezes, done while reading an email. No one will ever know.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOVEMENT BREAK — 3-4 min, 1-2x per day -->
+    <div id="break-movement" style="display:none">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:14px; line-height:1.6">
+        <span style="color:var(--accent)">Once or twice a day.</span> Mini activation session. Grab the band. 3–4 minutes.
+      </div>
+
+      <div class="ex-card" id="bex-m0">
+        <div class="ex-card-header" onclick="toggleBEx('m0')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-m0" onclick="event.stopPropagation();toggleBCheck('m0')"></div>
+            <div>
+              <div class="ex-name">Wall sit with active knee-out</div>
+              <div class="ex-meta">2 × 45–60 sec</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Back flat against wall, thighs parallel to floor. <strong>Actively push both knees outward as if resisting an imaginary band — don't let them cave in.</strong> You should feel the outer hip firing on both sides. Focus on the left. This isometrically loads the glute med in a position that directly counters the hip flexor dominance from sitting. 45–60 seconds, two sets.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-m1">
+        <div class="ex-card-header" onclick="toggleBEx('m1')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-m1" onclick="event.stopPropagation();toggleBCheck('m1')"></div>
+            <div>
+              <div class="ex-name">Banded side steps</div>
+              <div class="ex-meta">Band above knees · 15 steps each way × 2</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Same as your pre-session activation. Band above knees, toes forward, hips level. <strong>Feel the left outer hip working — not the front of the thigh.</strong> Doing this mid-day means the left glute med gets activated three times across the day — morning, desk break, pre-session. That frequency matters for repatterning.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-m2">
+        <div class="ex-card-header" onclick="toggleBEx('m2')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-m2" onclick="event.stopPropagation();toggleBCheck('m2')"></div>
+            <div>
+              <div class="ex-name">Kneeling hip flexor stretch</div>
+              <div class="ex-meta">Left knee down · 45–60 sec with glute squeeze</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Left knee down, right foot forward. <strong>Squeeze left glute before leaning in.</strong> On movement break days hold longer than the reset break — 45–60 seconds. You've been sitting longer, the hip flexor needs more time to actually release. Breathe into the stretch rather than forcing it.</div>
+        </div>
+      </div>
+
+      <div class="ex-card" id="bex-m3">
+        <div class="ex-card-header" onclick="toggleBEx('m3')">
+          <div class="ex-card-left">
+            <div class="ex-check" id="bchk-m3" onclick="event.stopPropagation();toggleBCheck('m3')"></div>
+            <div>
+              <div class="ex-name">Single-leg stance hold</div>
+              <div class="ex-meta">Left leg · 3 × 15 sec</div>
+            </div>
+          </div>
+          <span class="ex-chevron">▼</span>
+        </div>
+        <div class="ex-detail">
+          <div class="ex-cue">Stand on left leg. <strong>Tripod foot contact — heel, little toe base, big toe base all equal.</strong> Keep right hip level. 15 seconds. After hours of sitting with the left glute med inhibited, this is a direct neural reset. Three holds takes under a minute and bridges the gap between your morning activation and your evening session.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG SECTION — always visible -->
+    <div class="divider"></div>
+    <div class="section-label">Log this break</div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.6" id="break-count-display">Break count today: loading...</div>
+
+    <button class="log-btn" id="break-log-btn" onclick="logBreak()">Log break</button>
+
+    <div class="sync-status" id="break-sync-status" style="margin-top:12px">
+      <div class="sync-dot" id="break-sync-dot"></div>
+      <span id="break-sync-text">Ready to sync to Google Sheets</span>
+    </div>
+
+
+
   </div>
 
   <!-- PROGRESS -->
@@ -345,12 +816,37 @@
         <div class="stat-label">Week streak</div>
       </div>
     </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-breaks">—</div>
+        <div class="stat-label">Breaks this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-morning">—</div>
+        <div class="stat-label">Morning sessions</div>
+      </div>
+    </div>
 
     <div class="chart-wrap">
       <div class="chart-title">Symmetry trend · step-down test</div>
       <svg class="chart-svg" height="80" id="sym-chart" viewBox="0 0 340 80">
         <text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Loading...</text>
       </svg>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Right side tension trend</div>
+      <svg class="chart-svg" height="80" id="rt-chart" viewBox="0 0 340 80">
+        <text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Loading...</text>
+      </svg>
+    </div>
+
+    <div class="ai-card">
+      <div class="ai-card-title">
+        <span>Weekly analysis</span>
+        <button class="analyse-btn" id="analyse-btn" onclick="runAnalysis()">Analyse</button>
+      </div>
+      <div class="ai-body muted" id="ai-output">Tap Analyse to get a plain-English read of your last 2 weeks of data.</div>
     </div>
 
     <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -415,6 +911,8 @@
       Keep the deadlifts. Keep the bike. Keep the soccer.<br><br>
       The program wraps <em>around</em> your training. 20 minutes of targeted work added to sessions you're already doing is enough. A program you actually do for 12 months beats a perfect program you abandon at week 6.<br><br>
       <span style="color:var(--warn)">One physio session</span> in month 1–2 to confirm your activation is hitting the glute med and not the TFL will save months of working on the wrong thing.
+      <br><br><span style="color:var(--muted)">Apps Script update needed:</span> the richer logging (energy, right tension, notes) requires your Google Apps Script to be updated. Replace the header row line in your script with:<br>
+      <code style="font-size:10px;color:var(--accent);background:var(--surface2);padding:4px 8px;border-radius:6px;display:block;margin-top:6px;line-height:1.8">sheet.appendRow(['Date','Type','Sym Score','Sym Label','Exercises','Energy','Right Tension','Day','Time of Day','Notes']);</code>
     </div>
   </div>
 </div>
@@ -428,8 +926,44 @@
     sessionType: null,
     checks: {},
     symScore: null,
+    energy: null,
+    rightTension: null,
     remoteLog: []
   };
+
+  function selectRT(v) {
+    state.rightTension = v;
+    [1,2,3].forEach(i => {
+      const b = document.getElementById('rt-' + i);
+      if (b) b.className = 'quick-btn';
+    });
+    const cls = ['','sel-t-low','sel-t-med','sel-t-high'];
+    const b = document.getElementById('rt-' + v);
+    if (b) b.className = 'quick-btn ' + cls[v];
+  }
+
+  function selectEnergy(v) {
+    state.energy = v;
+    [1,2,3].forEach(i => {
+      const b = document.getElementById('en-' + i);
+      if (b) b.className = 'quick-btn';
+    });
+    const cls = ['','sel-h','sel-w','sel-e'];
+    const b = document.getElementById('en-' + v);
+    if (b) b.className = 'quick-btn ' + cls[v];
+  }
+
+  let morningRightTension = null;
+  function selectMRT(v) {
+    morningRightTension = v;
+    [1,2,3].forEach(i => {
+      const b = document.getElementById('mrt-' + i);
+      if (b) b.className = 'quick-btn';
+    });
+    const cls = ['','sel-t-low','sel-t-med','sel-t-high'];
+    const b = document.getElementById('mrt-' + v);
+    if (b) b.className = 'quick-btn ' + cls[v];
+  }
 
   // --- UI ---
   function showPage(name, tabEl) {
@@ -438,6 +972,7 @@
     document.getElementById('page-' + name).classList.add('active');
     if (tabEl) tabEl.classList.add('active');
     if (name === 'progress') loadProgress();
+    if (name === 'breaks') updateBreakCount();
   }
 
   function showToast(msg, isError) {
@@ -467,6 +1002,15 @@
       const el = document.getElementById(map[type] + '-block');
       if (el) el.style.display = 'block';
     }
+    const symQuestions = {
+      Lift:   'How did the left leg step-down feel vs the right?',
+      Run:    'How did the left hip feel vs the right — any drop or drift, especially when tired?',
+      Ride:   'How did the left side feel on the bike — any hip rocking or imbalance vs the right?',
+      Soccer: 'How did the left leg feel vs the right — cuts, explosiveness, any knee dive?',
+      Swim:   'How did the left side feel overall — any asymmetry in pull or kick?',
+      Rest:   'How does the left hip feel today vs the right — tightness, awareness, general symmetry?'
+    };
+    document.getElementById('sym-question').textContent = symQuestions[type] || 'How did the left side feel vs the right today?';
   }
 
   function toggleEx(i) {
@@ -497,14 +1041,23 @@
     setSyncStatus('syncing', 'Syncing to Google Sheets…');
 
     const symLabels = { 1: 'Very asymmetric', 2: 'Improving', 3: 'Feeling close' };
+    const energyLabels = { 1: 'Low', 2: 'Normal', 3: 'High' };
+    const tensionLabels = { 1: 'Low', 2: 'Moderate', 3: 'High' };
     const doneChecks = Object.values(state.checks).filter(Boolean).length;
+    const notes = document.getElementById('session-notes').value.trim();
+    const now = new Date();
 
     const payload = {
-      date: new Date().toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
+      date: now.toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
       type: state.sessionType,
       sym: state.symScore,
       symLabel: symLabels[state.symScore],
-      checks: doneChecks
+      checks: doneChecks,
+      energy: state.energy ? energyLabels[state.energy] : '',
+      rightTension: state.rightTension ? tensionLabels[state.rightTension] : '',
+      dayOfWeek: now.toLocaleDateString('en-CA', { weekday: 'long' }),
+      timeOfDay: now.getHours() < 12 ? 'Morning' : now.getHours() < 17 ? 'Afternoon' : 'Evening',
+      notes: notes
     };
 
     try {
@@ -518,17 +1071,18 @@
       setSyncStatus('synced', 'Saved to Google Sheets ✓');
       showToast('Session logged ✓');
 
-      // Reset form
-      state.sessionType = null;
-      state.symScore = null;
-      state.checks = {};
+      state.sessionType = null; state.symScore = null; state.checks = {};
+      state.energy = null; state.rightTension = null;
       document.querySelectorAll('.stype-btn').forEach(b => b.classList.remove('selected'));
       document.querySelectorAll('.ex-check').forEach(c => c.classList.remove('done'));
       [1,2,3].forEach(s => document.getElementById('sym-' + s).classList.remove('sel-1','sel-2','sel-3'));
+      [1,2,3].forEach(i => { const b = document.getElementById('en-' + i); if(b) b.className='quick-btn'; });
+      [1,2,3].forEach(i => { const b = document.getElementById('rt-' + i); if(b) b.className='quick-btn'; });
       ['lift','run','ride','soccer'].forEach(t => {
         const el = document.getElementById(t + '-block');
         if (el) el.style.display = 'none';
       });
+      document.getElementById('session-notes').value = '';
 
     } catch(err) {
       setSyncStatus('error', 'Sync failed — check connection');
@@ -552,11 +1106,14 @@
       const dataRows = rows.filter(r => r[0] !== 'Date' && r[0] !== '');
 
       state.remoteLog = dataRows.map(r => ({
-        date: r[0], type: r[1], sym: parseInt(r[2]) || 0, symLabel: r[3], checks: r[4]
+        date: r[0], type: r[1], sym: parseInt(r[2]) || 0, symLabel: r[3], checks: r[4],
+        energy: r[5] || '', rightTension: r[6] || '', dayOfWeek: r[7] || '',
+        timeOfDay: r[8] || '', notes: r[9] || ''
       })).reverse();
 
       renderStats();
       renderChart();
+      renderRTChart();
       renderLogList();
 
     } catch(err) {
@@ -568,15 +1125,106 @@
 
   function renderStats() {
     const log = state.remoteLog;
-    document.getElementById('stat-sessions').textContent = log.length;
+    // Only count non-break, non-morning sessions
+    const sessions = log.filter(e => e.type && !e.type.startsWith('Break') && !e.type.startsWith('Morning'));
+    document.getElementById('stat-sessions').textContent = sessions.length;
 
-    // Simple week streak — count distinct calendar weeks represented
-    const weeks = new Set(log.map(e => {
+    const weeks = new Set(sessions.map(e => {
       const d = new Date(e.date);
       const jan1 = new Date(d.getFullYear(), 0, 1);
       return d.getFullYear() + '-W' + Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
     }));
     document.getElementById('stat-streak').textContent = weeks.size;
+
+    // Breaks this week
+    const now = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+    const breaksThisWeek = log.filter(e => e.type && e.type.startsWith('Break') && new Date(e.date) >= weekStart).length;
+    document.getElementById('stat-breaks').textContent = breaksThisWeek;
+
+    // Morning sessions total
+    const mornings = log.filter(e => e.type && e.type.startsWith('Morning')).length;
+    document.getElementById('stat-morning').textContent = mornings;
+  }
+
+  function renderRTChart() {
+    const svg = document.getElementById('rt-chart');
+    if (!svg) return;
+    const log = state.remoteLog.filter(e => e.rightTension && e.rightTension !== '' && !e.type.startsWith('Break'));
+    if (log.length < 2) {
+      svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log right tension to see trend</text>';
+      return;
+    }
+    const tensionMap = { 'Low': 1, 'Moderate': 2, 'High': 3 };
+    const data = log.slice().reverse().slice(-12).map(e => tensionMap[e.rightTension] || 0).filter(v => v > 0);
+    if (data.length < 2) { svg.innerHTML = '<text x="170" y="44" text-anchor="middle" font-family="DM Mono" font-size="11" fill="rgba(232,228,217,0.3)">Log right tension to see trend</text>'; return; }
+    const W = 340, H = 80, pad = 24;
+    const xStep = (W - pad*2) / Math.max(data.length - 1, 1);
+    const pts = data.map((v, i) => ({ x: pad + i * xStep, y: H - pad - ((v - 1) / 2) * (H - pad*2) }));
+    const line = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
+    const fill = line + ` L${pts[pts.length-1].x},${H} L${pts[0].x},${H} Z`;
+    const dots = pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--warn)"/>`).join('');
+    const gridLabels = ['Low','Moderate','High'].map((l, i) => {
+      const y = H - pad - (i / 2) * (H - pad*2);
+      return `<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <text x="${pad-4}" y="${y+4}" text-anchor="end" font-size="8" font-family="DM Mono" fill="rgba(232,228,217,0.22)">${l}</text>`;
+    }).join('');
+    svg.innerHTML = `
+      <defs><linearGradient id="rtg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0a060" stop-opacity="0.2"/><stop offset="100%" stop-color="#f0a060" stop-opacity="0"/></linearGradient></defs>
+      ${gridLabels}
+      <path d="${fill}" fill="url(#rtg)"/>
+      <path d="${line}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    `;
+  }
+
+  async function runAnalysis() {
+    const btn = document.getElementById('analyse-btn');
+    const output = document.getElementById('ai-output');
+    btn.disabled = true;
+    btn.textContent = 'Analysing…';
+    output.className = 'ai-body muted';
+    output.textContent = 'Reading your data…';
+
+    // Build data summary for last 2 weeks
+    const twoWeeksAgo = new Date(); twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const recent = state.remoteLog.filter(e => new Date(e.date) >= twoWeeksAgo);
+
+    if (recent.length < 3) {
+      output.textContent = 'Log at least a few sessions over the next couple of weeks — then the analysis will have enough to work with.';
+      btn.disabled = false; btn.textContent = 'Analyse'; return;
+    }
+
+    const summary = recent.map(e =>
+      `${e.date} | ${e.type} | Symmetry: ${e.symLabel||'—'} | Right tension: ${e.rightTension||'—'} | Energy: ${e.energy||'—'} | Exercises done: ${e.checks} | Notes: ${e.notes||'none'}`
+    ).join('\n');
+
+    const prompt = `You are a sports physio assistant analysing rehabilitation progress data for a 40-year-old athlete. Context: Left ACL reconstruction 10 years ago with hamstring graft. Known left glute medius weakness and inhibition. Right side chronically overworking as compensation — right side tension is the leading indicator (high = compensation pattern active). Right hernia repair also on record. Program: daily pre-session activation, morning calisthenics, desk breaks, progressive single-leg loading. Goal: repattern left glute med recruitment and reduce right-side compensation over 12 months.
+
+Here is their logged data from the last 2 weeks:
+${summary}
+
+Write a 4-6 sentence plain-English analysis. Cover: symmetry trend direction, whether right tension is improving or stuck, any patterns between session types and outcomes, and one specific actionable observation. Be direct and specific — this person wants honest data read, not encouragement. Do not use bullet points. Do not mention the app or logging.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.find(b => b.type === 'text')?.text || 'Could not generate analysis.';
+      output.className = 'ai-body';
+      output.textContent = text;
+    } catch(err) {
+      output.textContent = 'Analysis unavailable — check your connection.';
+    }
+
+    btn.disabled = false; btn.textContent = 'Analyse';
   }
 
   function renderChart() {
@@ -617,14 +1265,260 @@
       return;
     }
     const dotClass = { 1: 'low', 2: 'med', 3: '' };
-    list.innerHTML = log.slice(0, 30).map(e => `
-      <div class="log-entry">
-        <div class="log-dot ${dotClass[e.sym] || ''}"></div>
-        <div>
+    list.innerHTML = log.slice(0, 30).map(e => {
+      const isBreak = e.type && e.type.startsWith('Break');
+      const isMorning = e.type && e.type.startsWith('Morning');
+      const extras = [];
+      if (e.rightTension) extras.push('R tension: ' + e.rightTension);
+      if (e.energy) extras.push('Energy: ' + e.energy);
+      const extraStr = extras.length ? ' · ' + extras.join(' · ') : '';
+      const notesStr = e.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic">"${e.notes}"</div>` : '';
+      return `<div class="log-entry">
+        <div class="log-dot ${isBreak ? 'med' : isMorning ? '' : (dotClass[e.sym] || '')}"></div>
+        <div style="flex:1">
           <div class="log-date">${e.date} · ${e.type || '—'}</div>
-          <div class="log-sym">Symmetry: ${e.symLabel || '—'} · ${e.checks || 0} exercises checked</div>
+          <div class="log-sym">${isBreak ? e.symLabel || '—' : 'Symmetry: ' + (e.symLabel || '—')}${extraStr} · ${e.checks || 0} done</div>
+          ${notesStr}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+  }
+
+
+
+  // --- BREAKS ---
+  let breakState = {
+    type: null,
+    checks: {}
+  };
+  let timerInterval = null;
+  let timerSeconds = 0;
+
+  function selectBreakType(type, btn) {
+    breakState.type = type;
+    breakState.checks = {};
+    ['reset','posture','movement'].forEach(t => {
+      const b = document.getElementById('btype-' + t);
+      if (b) { b.style.borderColor = 'var(--border)'; b.style.background = 'var(--surface)'; }
+      const el = document.getElementById('break-' + t);
+      if (el) el.style.display = 'none';
+    });
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.background = 'var(--accent-dim)';
+    const el = document.getElementById('break-' + type);
+    if (el) el.style.display = 'block';
+    document.querySelectorAll('[id^="bchk-"]').forEach(c => c.classList.remove('done'));
+  }
+
+  function toggleBEx(id) {
+    document.getElementById('bex-' + id).classList.toggle('open');
+  }
+
+  function toggleBCheck(id) {
+    const chk = document.getElementById('bchk-' + id);
+    breakState.checks[id] = chk.classList.toggle('done');
+  }
+
+  function startTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+    timerSeconds = seconds;
+    document.getElementById('timer-stop-btn').style.display = 'inline-block';
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      updateTimerDisplay();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        document.getElementById('timer-display').textContent = 'Done';
+        document.getElementById('timer-stop-btn').style.display = 'none';
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    document.getElementById('timer-display').textContent = '—';
+    document.getElementById('timer-stop-btn').style.display = 'none';
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('timer-display').textContent =
+      (m > 0 ? m + ':' + String(s).padStart(2,'0') : s + 's');
+  }
+
+  function setBreakSyncStatus(status, text) {
+    const dot = document.getElementById('break-sync-dot');
+    const txt = document.getElementById('break-sync-text');
+    dot.className = 'sync-dot ' + status;
+    txt.textContent = text;
+  }
+
+  function updateBreakCount() {
+    const el = document.getElementById('break-count-display');
+    if (!el) return;
+    const today = new Date().toLocaleDateString('en-CA');
+    const todayBreaks = state.remoteLog.filter(e =>
+      e.type && e.type.startsWith('Break') && e.date && e.date.startsWith(today)
+    ).length;
+    const localBreaks = parseInt(localStorage.getItem('breaks_today_' + today) || '0');
+    const total = Math.max(todayBreaks, localBreaks);
+    el.textContent = 'Break count today: ' + total + ' of 3+ target';
+  }
+
+  async function logBreak() {
+    if (!breakState.type) { showToast('Pick a break type first', true); return; }
+
+    const btn = document.getElementById('break-log-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    setBreakSyncStatus('syncing', 'Syncing to Google Sheets…');
+
+    const typeLabels = { reset: 'Reset (90 sec)', posture: 'Posture check', movement: 'Movement (3–4 min)' };
+    const doneChecks = Object.values(breakState.checks).filter(Boolean).length;
+    const today = new Date().toLocaleDateString('en-CA');
+
+    const payload = {
+      date: new Date().toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
+      type: 'Break · ' + typeLabels[breakState.type],
+      sym: 0,
+      symLabel: doneChecks + ' exercises done',
+      checks: doneChecks
+    };
+
+    try {
+      await fetch(SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Track locally for today's count
+      const prev = parseInt(localStorage.getItem('breaks_today_' + today) || '0');
+      localStorage.setItem('breaks_today_' + today, prev + 1);
+
+      setBreakSyncStatus('synced', 'Saved to Google Sheets ✓');
+      showToast('Break logged ✓');
+
+      // Reset
+      breakState = { type: null, checks: {} };
+      document.querySelectorAll('#page-breaks .stype-btn').forEach(b => b.classList.remove('selected'));
+      document.querySelectorAll('[id^="bchk-"]').forEach(c => c.classList.remove('done'));
+      ['reset','posture','movement'].forEach(t => {
+        const el = document.getElementById('break-' + t);
+        if (el) el.style.display = 'none';
+      });
+      updateBreakCount();
+
+    } catch(err) {
+      setBreakSyncStatus('error', 'Sync failed — check connection');
+      showToast('Could not save — try again', true);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Log break';
+  }
+
+  // --- MORNING ---
+  let morningState = {
+    mode: null,
+    checks: {},
+    pvar: null
+  };
+
+  function selectMorningMode(mode, btn) {
+    morningState.mode = mode;
+    document.querySelectorAll('#page-morning .stype-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const extras = document.getElementById('morning-extras');
+    extras.style.display = mode === 'full' ? 'block' : 'none';
+  }
+
+  function toggleMEx(i) {
+    document.getElementById('mex-' + i).classList.toggle('open');
+  }
+
+  function toggleMCheck(i) {
+    const chk = document.getElementById('mchk-' + i);
+    morningState.checks[i] = chk.classList.toggle('done');
+  }
+
+  function selectPVar(v) {
+    morningState.pvar = v;
+    [1,2,3,4].forEach(i => {
+      document.getElementById('pvar-' + i).classList.remove('sel-2','sel-3');
+    });
+    document.getElementById('pvar-' + v).classList.add('sel-3');
+  }
+
+  function setMorningSyncStatus(status, text) {
+    const dot = document.getElementById('morning-sync-dot');
+    const txt = document.getElementById('morning-sync-text');
+    dot.className = 'sync-dot ' + status;
+    txt.textContent = text;
+  }
+
+  async function logMorning() {
+    if (!morningState.pvar) { showToast('Pick a pushup variation', true); return; }
+
+    const btn = document.getElementById('morning-log-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    setMorningSyncStatus('syncing', 'Syncing to Google Sheets…');
+
+    const pvarLabels = { 1: 'Standard', 2: 'Close grip', 3: 'Archer', 4: 'Deficit' };
+    const doneChecks = Object.values(morningState.checks).filter(Boolean).length;
+
+    const notes = document.getElementById('morning-notes').value.trim();
+    const now = new Date();
+    const payload = {
+      date: now.toLocaleString('en-CA', { dateStyle: 'medium', timeStyle: 'short' }),
+      type: 'Morning · ' + (morningState.mode === 'full' ? '15 min' : '5 min'),
+      sym: 0,
+      symLabel: 'Pushup: ' + pvarLabels[morningState.pvar],
+      checks: doneChecks,
+      energy: '',
+      rightTension: morningRightTension ? ['','Low','Moderate','High'][morningRightTension] : '',
+      dayOfWeek: now.toLocaleDateString('en-CA', { weekday: 'long' }),
+      timeOfDay: 'Morning',
+      notes: notes
+    };
+
+    try {
+      await fetch(SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      setMorningSyncStatus('synced', 'Saved to Google Sheets ✓');
+      showToast('Morning session logged ✓');
+
+      // Reset
+      morningState = { mode: null, checks: {}, pvar: null };
+      morningRightTension = null;
+      document.querySelectorAll('#page-morning .stype-btn').forEach(b => b.classList.remove('selected'));
+      document.querySelectorAll('#page-morning .ex-check').forEach(c => c.classList.remove('done'));
+      [1,2,3,4].forEach(i => {
+        const el = document.getElementById('pvar-' + i);
+        if (el) el.classList.remove('sel-2','sel-3');
+      });
+      [1,2,3].forEach(i => { const b = document.getElementById('mrt-' + i); if(b) b.className='quick-btn'; });
+      document.getElementById('morning-extras').style.display = 'none';
+      document.getElementById('morning-notes').value = '';
+
+    } catch(err) {
+      setMorningSyncStatus('error', 'Sync failed — check connection');
+      showToast('Could not save — try again', true);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Log morning session';
   }
 
   // Init
